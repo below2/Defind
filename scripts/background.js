@@ -1,28 +1,31 @@
-chrome.runtime.onInstalled.addListener(function () {
+chrome.runtime.onInstalled.addListener(function() {
   chrome.contextMenus.create({
     id: "define",
     title: "Define",
-    contexts: ["selection"],
+    contexts: ["selection"]
   });
 });
 
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  if (message.type === "highlight") {
-    var apiUrl =
-      "https://api.dictionaryapi.dev/api/v2/entries/en/" +
-      encodeURIComponent(message.text);
-    fetch(apiUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log(data);
-      })
-      .catch((error) => {
-        console.error("There was a problem with the fetch operation:", error);
-      });
+chrome.contextMenus.onClicked.addListener(function(info, tab) {
+  if (info.menuItemId === "define") {
+    chrome.tabs.sendMessage(tab.id, { type: "fetchDefinitions" });
   }
 });
+
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+  const definitions = [];
+  if (message.type === "highlight") {
+    // TODO: Highlight the selected text
+  } else if (message.type === "definitions") {
+    const data = message.data;
+    data.forEach(entry => {
+      entry.meanings.forEach(meaning => {
+        meaning.definitions.forEach(definition => {
+          definitions.push(definition.definition);
+        });
+      });
+    });
+    console.log(definitions);
+  }
+});
+
