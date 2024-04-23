@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Defind",
+  "description": "Chrome extension that lets you find the definition of a highlighted word",
+  "version": "1.0",
+  "permissions": ["contextMenus", "activeTab"],
+  "background": {
+    "service_worker": "scripts/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["scripts/content.js"]
+    }
+  ]
+}
