@@ -9,32 +9,30 @@
 }
 
 .entryContainer {
-    /* position: absolute; */
-    background-color: #f9f9f9; /* Light background color */
-    border: 1px solid #ccc; /* Lighter border color */
-    padding: 10px; /* Increased padding for better spacing */
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+    padding: 10px;
     z-index: 9999;
     max-height: 141px;
     overflow-y: auto;
-    border-radius: 10px; /* Slightly increased border radius for softer edges */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Soft box shadow for depth */
+    border-radius: 10px;
+    border-top-right-radius: 0px;
+    border-bottom-right-radius: 0px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   }
   
-  /* Define the styles for the scrollbar track */
   .entryContainer::-webkit-scrollbar-track {
-    background-color: #f9f9f9; /* Same as container background */
-    border-radius: 10px; /* Same as container border radius */
+    background-color: #f9f9f9;
+    border-radius: 10px;
   }
   
-  /* Define the styles for the scrollbar thumb */
   .entryContainer::-webkit-scrollbar-thumb {
-    background-color: #ccc; /* Color of the scrollbar thumb */
-    border-radius: 10px; /* Same as container border radius */
+    background-color: #ccc;
+    border-radius: 10px;
   }
   
-  /* Define the styles for the scrollbar corner */
   .entryContainer::-webkit-scrollbar-corner {
-    background-color: transparent; /* Hide scrollbar corner */
+    background-color: transparent;
   }
 
 .entry {
@@ -42,8 +40,8 @@
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
     margin: 0;
-    padding: 8px 12px; /* Increased padding for better spacing */
-    border-bottom: 1px solid #e0e0e0; /* Subtle border between definitions */
+    padding: 8px 12px;
+    border-bottom: 1px solid #e0e0e0;
   }  
 
 .entry:hover {
@@ -72,7 +70,7 @@
     padding: 5px 10px;
     border-radius: 5px 5px 0 0;
     cursor: pointer;
-    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1); /* Add box shadow */
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
     color: black;
   }
   

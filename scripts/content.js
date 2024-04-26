@@ -77,21 +77,33 @@ function initData(data) {
 function createMenuContainer() {
   menuContainer = document.createElement("div");
   menuContainer.classList.add("menuContainer");
+  
   const selectionRect = range.getBoundingClientRect();
-  menuContainer.style.top = selectionRect.bottom + window.scrollY + "px";
-  menuContainer.style.left = selectionRect.left + "px";
+  const screenWidth = window.innerWidth;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  const isLeftScreen = selectionRect.left < screenWidth / 2;
+  if (isLeftScreen) {
+    menuContainer.style.left = selectionRect.left + "px";
+  } else {
+    menuContainer.style.right = (screenWidth - selectionRect.right - scrollbarWidth) + "px";
+  }
 
-  createTabs();
-  createEntriesContainer();
+  menuContainer.style.top = selectionRect.bottom + window.scrollY + "px";
+
+  createTabs(isLeftScreen);
+  createEntriesContainer(isLeftScreen);
 
   menuContainer.appendChild(tabsContainer);
   menuContainer.appendChild(entriesContainer);
   document.body.appendChild(menuContainer);
 }
 
-function createTabs() {
+function createTabs(isLeftScreen) {
   tabsContainer = document.createElement("div");
   tabsContainer.classList.add("tabs");
+  if (!isLeftScreen) {
+    tabsContainer.style.justifyContent = "left";
+  }
 
   // Create Definitions tab
   const definitionsTab = document.createElement("button");
@@ -137,26 +149,53 @@ function createTabs() {
 }
 
 function showDefinitions() {
-  definitions.forEach((definition) => {
-    createEntry(definition, [], [], "definition");
-  });
+  if (definitions.length !== 0) {
+    definitions.forEach((definition) => {
+      createEntry(definition, [], [], "definition");
+    });
+  } else {
+    createEmptyEntry("definition");
+  }
 }
 
 function showSynonyms() {
-  synonyms.forEach((synonym) => {
-    createEntry([], synonym, [], "synonym");
-  });
+  if (synonyms.length !== 0) {
+    synonyms.forEach((synonym) => {
+      createEntry([], synonym, [], "synonym");
+    });
+  } else {
+    createEmptyEntry("synonym");
+  }
 }
 
 function showAntonyms() {
-  antonyms.forEach((antonym) => {
-    createEntry([], [], antonym, "antonym");
-  });
+  if (antonyms.length !== 0) {
+    antonyms.forEach((antonym) => {
+      createEntry([], [], antonym, "antonym");
+    });
+  } else {
+    createEmptyEntry("antonym");
+  }
 }
 
-function createEntriesContainer() {
+function createEntriesContainer(isLeftScreen) {
   entriesContainer = document.createElement("div");
   entriesContainer.classList.add("entryContainer");
+  if (!isLeftScreen) {
+    entriesContainer.style.borderTopLeftRadius = "0px";
+  }
+}
+
+function createEmptyEntry(type) {
+  const emptyEntry = document.createElement("p");
+  emptyEntry.textContent = "No " + type + "s found";
+  emptyEntry.classList.add("entry");
+
+  emptyEntry.addEventListener("click", () => {
+    menuContainer.remove();
+  });
+
+  entriesContainer.appendChild(emptyEntry);
 }
 
 function createEntry(definition, synonym, antonym, type) {
@@ -164,23 +203,38 @@ function createEntry(definition, synonym, antonym, type) {
   if (type === "definition") {
     entry.textContent = "(" + definition.partOfSpeech + ") " + definition.definition;
     entry.classList.add("entry");
-    entry.addEventListener("click", () => createSpan(entry.textContent));
+    entry.addEventListener("click", () => createSpan(entry.textContent, type));
   } else if (type === "synonym") {
     entry.textContent = synonym.synonym;
     entry.classList.add("entry", "synonym");
-    entry.addEventListener("click", () => createSpan(synonym.synonym));
+    entry.addEventListener("click", () => createSpan(synonym.synonym, type));
   } else if (type === "antonym") {
     entry.textContent = antonym.antonym;
     entry.classList.add("entry", "antonym");
-    entry.addEventListener("click", () => createSpan(antonym.antonym));
+    entry.addEventListener("click", () => createSpan(antonym.antonym, type));
   }
   entriesContainer.appendChild(entry);
 }
 
-function createSpan(entryText) {
+function createSpan(entryText, type) {
   const span = document.createElement("span");
   span.classList.add("selectedWord");
-  span.addEventListener("click", () => createSelectedEntryContainer(span, entryText));
+  if (type === "definition") {
+    span.addEventListener("click", (event) => {
+      event.stopPropagation();
+      createSelectedEntryContainer(span, entryText);
+    });
+  } else if (type === "synonym") {
+    span.addEventListener("click", (event) => {
+      event.stopPropagation();
+      createSelectedEntryContainer(span, "(synonym) " + entryText);
+    });
+  } else if (type === "antonym") {
+    span.addEventListener("click", (event) => {
+      event.stopPropagation();
+      createSelectedEntryContainer(span, "(antonym) " + entryText);
+    });
+  }
   range.surroundContents(span);
   menuContainer.remove();
 }
@@ -194,12 +248,27 @@ function createSelectedEntryContainer(span, entryText) {
     selectedEntryContainer = document.createElement("div");
     selectedEntryContainer.classList.add("entryContainer");
     selectedEntryContainer.style.position = "absolute";
+    selectedEntryContainer.style.borderTopRightRadius = "10px";
+    selectedEntryContainer.style.borderBottomRightRadius =  "10px";
+
+    const screenWidth = window.innerWidth;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const isLeftScreen = spanRect.left < screenWidth / 2;
+    if (isLeftScreen) {
+      selectedEntryContainer.style.left = spanRect.left + "px";
+    } else {
+      selectedEntryContainer.style.right = (screenWidth - spanRect.right - scrollbarWidth) + "px";
+    }
+  
     selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
-    selectedEntryContainer.style.left = spanRect.left + "px";
+
+    // selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
+    // selectedEntryContainer.style.left = spanRect.left + "px";
 
     const selectedEntry = document.createElement("p");
     selectedEntry.textContent = entryText;
     selectedEntry.classList.add("entry");
+    selectedEntry.style.borderBottom = "none";
     selectedEntry.addEventListener("click", () => {
       selectedEntryContainer.remove();
       selectedEntryContainer = null;
@@ -214,5 +283,12 @@ document.addEventListener("selectionchange", function () {
   const selectionContainer = document.getSelection().focusNode;
   if (menuContainer && !menuContainer.contains(selectionContainer)) {
     menuContainer.remove();
+  }
+});
+
+document.addEventListener("click", () => {
+  if (selectedEntryContainer) {
+    selectedEntryContainer.remove();
+    selectedEntryContainer = null;
   }
 });
