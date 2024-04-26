@@ -1,12 +1,37 @@
+/* Define the styles for the container */
 .definitionsBox {
     position: absolute;
-    background-color: white;
-    border: 1px solid black;
-    padding: 5px;
+    background-color: #f9f9f9; /* Light background color */
+    border: 1px solid #ccc; /* Lighter border color */
+    padding: 10px; /* Increased padding for better spacing */
     z-index: 9999;
-    max-height: 150px;
+    max-height: 141px;
     overflow-y: auto;
-    border-radius: 8px;
+    border-radius: 10px; /* Slightly increased border radius for softer edges */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Soft box shadow for depth */
+  }
+  
+  /* Define the styles for the scrollbar track */
+  .definitionsBox::-webkit-scrollbar-track {
+    background-color: #f9f9f9; /* Same as container background */
+    border-radius: 10px; /* Same as container border radius */
+  }
+  
+  /* Define the styles for the scrollbar thumb */
+  .definitionsBox::-webkit-scrollbar-thumb {
+    background-color: #ccc; /* Color of the scrollbar thumb */
+    border-radius: 10px; /* Same as container border radius */
+  }
+  
+  /* Define the styles for the scrollbar corner */
+  .definitionsBox::-webkit-scrollbar-corner {
+    background-color: transparent; /* Hide scrollbar corner */
+  }
+
+.menuContainer {
+    position: absolute;
+    background-color: white;
+    z-index: 9999;
 }
 
 .definition {
@@ -14,11 +39,12 @@
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
     margin: 0;
-    padding: 2px 2px 2px 5px;
-}
+    padding: 8px 12px; /* Increased padding for better spacing */
+    border-bottom: 1px solid #e0e0e0; /* Subtle border between definitions */
+  }  
 
 .definition:hover {
-    background-color: #f0f0f0;
+    background-color: #e6e6e6;
 }
 
 .definedWord {
@@ -30,3 +56,23 @@
 .definedWord:hover {
     cursor: pointer;
 }
+
+/* .tabs {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 5px;
+  } */
+  
+  .tab {
+    background-color: #d9d9d9;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 1px; /* Add some space between buttons */
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1); /* Add box shadow */
+  }
+  
+  .tab.active {
+    background-color: #bbb;
+  }
