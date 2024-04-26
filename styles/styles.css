@@ -1,6 +1,15 @@
-/* Define the styles for the container */
-.definitionsBox {
-    position: absolute;
+.menuContainer {
+  position: absolute;
+  z-index: 9999;
+  width: 500px;
+  background-color: transparent;
+  transform: translateY(-21px);
+  display: flex;
+  flex-direction: column;
+}
+
+.entryContainer {
+    /* position: absolute; */
     background-color: #f9f9f9; /* Light background color */
     border: 1px solid #ccc; /* Lighter border color */
     padding: 10px; /* Increased padding for better spacing */
@@ -12,29 +21,23 @@
   }
   
   /* Define the styles for the scrollbar track */
-  .definitionsBox::-webkit-scrollbar-track {
+  .entryContainer::-webkit-scrollbar-track {
     background-color: #f9f9f9; /* Same as container background */
     border-radius: 10px; /* Same as container border radius */
   }
   
   /* Define the styles for the scrollbar thumb */
-  .definitionsBox::-webkit-scrollbar-thumb {
+  .entryContainer::-webkit-scrollbar-thumb {
     background-color: #ccc; /* Color of the scrollbar thumb */
     border-radius: 10px; /* Same as container border radius */
   }
   
   /* Define the styles for the scrollbar corner */
-  .definitionsBox::-webkit-scrollbar-corner {
+  .entryContainer::-webkit-scrollbar-corner {
     background-color: transparent; /* Hide scrollbar corner */
   }
 
-.menuContainer {
-    position: absolute;
-    background-color: white;
-    z-index: 9999;
-}
-
-.definition {
+.entry {
     color: black;
     font-family: Arial, Helvetica, sans-serif;
     font-size: 14px;
@@ -43,36 +46,36 @@
     border-bottom: 1px solid #e0e0e0; /* Subtle border between definitions */
   }  
 
-.definition:hover {
+.entry:hover {
     background-color: #e6e6e6;
 }
 
-.definedWord {
+.selectedWord {
     font-weight: bold;
     color: royalblue;
     font-style: italic;
 }
 
-.definedWord:hover {
+.selectedWord:hover {
     cursor: pointer;
 }
 
-/* .tabs {
+.tabs {
     display: flex;
-    justify-content: space-around;
-    margin-bottom: 5px;
-  } */
+    justify-content: right;
+  }
   
   .tab {
     background-color: #d9d9d9;
-    border: none;
+    border: 1px solid #ccc;
+    border-bottom: none;
     padding: 5px 10px;
-    border-radius: 5px;
+    border-radius: 5px 5px 0 0;
     cursor: pointer;
-    margin-right: 1px; /* Add some space between buttons */
     box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1); /* Add box shadow */
+    color: black;
   }
   
   .tab.active {
-    background-color: #bbb;
+    background-color: #f9f9f9;
   }

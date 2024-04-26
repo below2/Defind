@@ -4,9 +4,15 @@ linkElement.type = "text/css";
 linkElement.href = chrome.runtime.getURL("styles/styles.css");
 document.head.appendChild(linkElement);
 
-let definitionsBox;
-let selectedDefinitionsBox;
+let menuContainer;
+let tabsContainer;
+let entriesContainer;
+let selectedEntryContainer;
 let range;
+
+let definitions = [];
+let synonyms = [];
+let antonyms = [];
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "fetchDefinitions") {
@@ -15,45 +21,76 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
 
     fetch(apiUrl)
-      .then(response => {
+      .then((response) => {
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
         return response.json();
       })
-      .then(data => {
-        createDefinitionsBox();
-        data.forEach(entry => {
-          entry.meanings.forEach(meaning => {
-            meaning.definitions.forEach(definition => {
-              createDefinitionElement(definition.definition, meaning.partOfSpeech);
-            });
-          });
-        });
+      .then((data) => {
+        initData(data);
+        createMenuContainer();
+        showDefinitions();
       })
-      .catch(error => {
+      .catch((error) => {
         console.error("There was a problem with the fetch operation:", error);
       });
   }
 });
 
-function createDefinitionsBox() {
-  const selectionRect = range.getBoundingClientRect();
+function initData(data) {
+  definitions = [];
+  synonyms = [];
+  antonyms = [];
+  data.forEach((entry) => {
+    // Extract definitions
+    entry.meanings.forEach((meaning) => {
+      meaning.definitions.forEach((definition) => {
+        definitions.push({
+          word: entry.word,
+          partOfSpeech: meaning.partOfSpeech,
+          definition: definition.definition,
+        });
+      });
+    });
 
+    // Extract synonyms
+    meaningSynonyms = entry.meanings.flatMap((meaning) => meaning.synonyms);
+    synonyms.push(
+      ...meaningSynonyms.map((synonym) => ({
+        word: entry.word,
+        synonym: synonym,
+      }))
+    );
+
+    // Extract antonyms
+    meaningAntonyms = entry.meanings.flatMap((meaning) => meaning.antonyms);
+    antonyms.push(
+      ...meaningAntonyms.map((antonym) => ({
+        word: entry.word,
+        antonym: antonym,
+      }))
+    );
+  });
+}
+
+function createMenuContainer() {
   menuContainer = document.createElement("div");
   menuContainer.classList.add("menuContainer");
+  const selectionRect = range.getBoundingClientRect();
   menuContainer.style.top = selectionRect.bottom + window.scrollY + "px";
   menuContainer.style.left = selectionRect.left + "px";
-  menuContainer.style.width = "500px";
-  menuContainer.style.backgroundColor = "transparent";
-  menuContainer.style.transform = "translateY(-21px)";
 
-  definitionsBox = document.createElement("div");
-  definitionsBox.classList.add("definitionsBox");
-  definitionsBox.style.transform = "translateY(21px)";
+  createTabs();
+  createEntriesContainer();
 
-  // Create tabs container
-  const tabsContainer = document.createElement("div");
+  menuContainer.appendChild(tabsContainer);
+  menuContainer.appendChild(entriesContainer);
+  document.body.appendChild(menuContainer);
+}
+
+function createTabs() {
+  tabsContainer = document.createElement("div");
   tabsContainer.classList.add("tabs");
 
   // Create Definitions tab
@@ -61,6 +98,13 @@ function createDefinitionsBox() {
   definitionsTab.classList.add("tab", "active");
   definitionsTab.id = "definitionsTab";
   definitionsTab.textContent = "Definitions";
+  definitionsTab.addEventListener("click", () => {
+    definitionsTab.classList.add("active");
+    synonymsTab.classList.remove("active");
+    antonymsTab.classList.remove("active");
+    entriesContainer.innerHTML = "";
+    showDefinitions();
+  });
   tabsContainer.appendChild(definitionsTab);
 
   // Create Synonyms tab
@@ -68,6 +112,13 @@ function createDefinitionsBox() {
   synonymsTab.classList.add("tab");
   synonymsTab.id = "synonymsTab";
   synonymsTab.textContent = "Synonyms";
+  synonymsTab.addEventListener("click", () => {
+    definitionsTab.classList.remove("active");
+    synonymsTab.classList.add("active");
+    antonymsTab.classList.remove("active");
+    entriesContainer.innerHTML = "";
+    showSynonyms();
+  });
   tabsContainer.appendChild(synonymsTab);
 
   // Create Antonyms tab
@@ -75,53 +126,93 @@ function createDefinitionsBox() {
   antonymsTab.classList.add("tab");
   antonymsTab.id = "antonymsTab";
   antonymsTab.textContent = "Antonyms";
+  antonymsTab.addEventListener("click", () => {
+    definitionsTab.classList.remove("active");
+    synonymsTab.classList.remove("active");
+    antonymsTab.classList.add("active");
+    entriesContainer.innerHTML = "";
+    showAntonyms();
+  });
   tabsContainer.appendChild(antonymsTab);
-
-  // Append tabs container to definitions box
-  menuContainer.appendChild(tabsContainer);
-  menuContainer.appendChild(definitionsBox);
-
-  document.body.appendChild(menuContainer);
-  // document.body.appendChild(definitionsBox);
 }
 
-function createDefinitionElement(definitionText, partOfSpeech) {
-  const definitionElement = document.createElement("p");
-  definitionElement.textContent = "(" + partOfSpeech + ") " + definitionText;
-  definitionElement.classList.add("definition");
-  definitionElement.addEventListener("click", () => createSpan(definitionElement.textContent));
-  definitionsBox.appendChild(definitionElement);
-  return definitionElement;
+function showDefinitions() {
+  definitions.forEach((definition) => {
+    createEntry(definition, [], [], "definition");
+  });
 }
 
-function createSpan(definition) {
+function showSynonyms() {
+  synonyms.forEach((synonym) => {
+    createEntry([], synonym, [], "synonym");
+  });
+}
+
+function showAntonyms() {
+  antonyms.forEach((antonym) => {
+    createEntry([], [], antonym, "antonym");
+  });
+}
+
+function createEntriesContainer() {
+  entriesContainer = document.createElement("div");
+  entriesContainer.classList.add("entryContainer");
+}
+
+function createEntry(definition, synonym, antonym, type) {
+  const entry = document.createElement("p");
+  if (type === "definition") {
+    entry.textContent = "(" + definition.partOfSpeech + ") " + definition.definition;
+    entry.classList.add("entry");
+    entry.addEventListener("click", () => createSpan(entry.textContent));
+  } else if (type === "synonym") {
+    entry.textContent = synonym.synonym;
+    entry.classList.add("entry", "synonym");
+    entry.addEventListener("click", () => createSpan(synonym.synonym));
+  } else if (type === "antonym") {
+    entry.textContent = antonym.antonym;
+    entry.classList.add("entry", "antonym");
+    entry.addEventListener("click", () => createSpan(antonym.antonym));
+  }
+  entriesContainer.appendChild(entry);
+}
+
+function createSpan(entryText) {
   const span = document.createElement("span");
-  span.classList.add("definedWord");
-  span.addEventListener("click", () => createSelectedDefinitionsBox(span, definition));
+  span.classList.add("selectedWord");
+  span.addEventListener("click", () => createSelectedEntryContainer(span, entryText));
   range.surroundContents(span);
-  definitionsBox.remove();
+  menuContainer.remove();
 }
 
-function createSelectedDefinitionsBox(span, definition) {
-  if (selectedDefinitionsBox) {
-    selectedDefinitionsBox.remove();
-    selectedDefinitionsBox = null;
+function createSelectedEntryContainer(span, entryText) {
+  if (selectedEntryContainer) {
+    selectedEntryContainer.remove();
+    selectedEntryContainer = null;
   } else {
     const spanRect = span.getBoundingClientRect();
-    selectedDefinitionsBox = document.createElement("div");
-    selectedDefinitionsBox.classList.add("definitionsBox");
-    selectedDefinitionsBox.style.top = spanRect.bottom + window.scrollY + "px";
-    selectedDefinitionsBox.style.left = spanRect.left + "px";
+    selectedEntryContainer = document.createElement("div");
+    selectedEntryContainer.classList.add("entryContainer");
+    selectedEntryContainer.style.position = "absolute";
+    selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
+    selectedEntryContainer.style.left = spanRect.left + "px";
 
-    const selectedDefinitionElement = document.createElement("p");
-    selectedDefinitionElement.textContent = definition;
-    selectedDefinitionElement.classList.add("definition");
-    selectedDefinitionElement.addEventListener("click", () => {
-      selectedDefinitionsBox.remove();
-      selectedDefinitionsBox = null;
+    const selectedEntry = document.createElement("p");
+    selectedEntry.textContent = entryText;
+    selectedEntry.classList.add("entry");
+    selectedEntry.addEventListener("click", () => {
+      selectedEntryContainer.remove();
+      selectedEntryContainer = null;
     });
 
-    document.body.appendChild(selectedDefinitionsBox);
-    selectedDefinitionsBox.appendChild(selectedDefinitionElement);
+    document.body.appendChild(selectedEntryContainer);
+    selectedEntryContainer.appendChild(selectedEntry);
   }
 }
+
+document.addEventListener("selectionchange", function () {
+  const selectionContainer = document.getSelection().focusNode;
+  if (menuContainer && !menuContainer.contains(selectionContainer)) {
+    menuContainer.remove();
+  }
+});
