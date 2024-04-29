@@ -13,6 +13,7 @@ let tabsContainer;
 let entriesContainer;
 let selectedEntryContainer;
 let range;
+let selectedText;
 
 let definitions = [];
 let synonyms = [];
@@ -23,10 +24,9 @@ let pronunciation;
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "fetchDefinitions") {
     range = window.getSelection().getRangeAt(0);
-    const selectedText = window.getSelection().toString().trim();
+    selectedText = window.getSelection().toString().trim();
     let apiUrl = "https://dictionaryapi.com/api/v3/references/collegiate/json/" + encodeURIComponent(selectedText) + "?key=1f8aba8b-8b44-4786-93fd-dfc4ff0e94cf";
 
-    let apiPass = false;
     fetch(apiUrl)
       .then((response) => {
         if (!response.ok) {
@@ -35,56 +35,64 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return response.json();
       })
       .then((data) => {
-        apiPass = true
         initDictionary(data);
+
+        apiUrl = "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
+        fetch(apiUrl)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok (thesaurus)");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            initThesaurus(data);
+            createMenuContainer();
+            showDefinitions();
+          })
+          .catch((error) => {
+            console.error("There was a problem with the fetch operation (thesaurus):", error);
+            console.error("Reverting to backup");
+
+            apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
+            fetch(apiUrl)
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Network response was not ok (backup)");
+                }
+                return response.json();
+              })
+              .then((data) => {
+                initDataBackup(data);
+                createMenuContainer();
+                showDefinitions();
+              })
+              .catch((error) => {
+                console.error("There was a problem with the fetch operation (backup):", error);
+              });
+          });
       })
       .catch((error) => {
         console.error("There was a problem with the fetch operation (dictionary):", error);
         console.error("Reverting to backup");
+
+        apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
+        fetch(apiUrl)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok (backup)");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            initDataBackup(data);
+            createMenuContainer();
+            showDefinitions();
+          })
+          .catch((error) => {
+            console.error("There was a problem with the fetch operation (backup):", error);
+          });
       });
-
-    if (apiPass) {
-      apiUrl = "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
-      fetch(apiUrl)
-        .then((response) => {
-          if (!response.ok) {
-            apiPass = false;
-            throw new Error("Network response was not ok (thesaurus)");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          initThesaurus(data);
-          createMenuContainer();
-          showDefinitions();
-        })
-        .catch((error) => {
-          apiPass = false;
-          console.error("There was a problem with the fetch operation (thesaurus):", error);
-          console.error("Reverting to backup");
-        });
-    }
-
-    if (!apiPass || definitions.length === 0) {
-      apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
-      fetch(apiUrl)
-        .then((response) => {
-          if (!response.ok) {
-            apiPass = false;
-            throw new Error("Network response was not ok (thesaurus)");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          initDataBackup(data);
-          createMenuContainer();
-          showDefinitions();
-        })
-        .catch((error) => {
-          apiPass = false;
-          console.error("There was a problem with the fetch operation (backup):", error);
-        });
-    }
   }
 });
 
@@ -93,57 +101,58 @@ function initDictionary(data) {
   audio = null;
   pronunciation = null;
 
-  if (data[0].hwi) {
+  const audioPrefix = data?.[0]?.hwi?.prs?.[0]?.sound?.audio;
+  if (audioPrefix) {
     let subdirectory = "";
-    if (data[0].hwi.prs[0].sound.audio.substring(0, 3) === "bix") {
+    if (audioPrefix.startsWith("bix")) {
       subdirectory = "bix";
-    } else if (data[0].hwi.prs[0].sound.audio.substring(0, 2) === "gg") {
+    } else if (audioPrefix.startsWith("gg")) {
       subdirectory = "gg";
-    } else if (/^[0-9\W]/.test(data[0].hwi.prs[0].sound.audio)) {
+    } else if (/^[0-9\W]/.test(audioPrefix)) {
       subdirectory = "number";
     } else {
-      subdirectory = data[0].hwi.prs[0].sound.audio.substring(0, 1);
+      subdirectory = audioPrefix.substring(0, 1);
     }
-    audio = new Audio("https://media.merriam-webster.com/audio/prons/en/us/mp3/" + subdirectory + "/" + data[0].hwi.prs[0].sound.audio + ".mp3")
-
-    pronunciation = data[0].hwi.prs[0].mw;
+    const audioURL = `https://media.merriam-webster.com/audio/prons/en/us/mp3/${subdirectory}/${audioPrefix}.mp3`;
+    audio = new Audio(audioURL);
+    pronunciation = data?.[0]?.hwi?.prs?.[0]?.mw;
   }
 
-  
-
-  if (data[0].fl) {
+  const partOfSpeech = data?.[0]?.fl;
+  if (partOfSpeech) {
     data.forEach((entry) => {
-      let partOfSpeech = entry.fl;
-      entry.shortdef.forEach((def) => {
+      const shortDefinitions = entry.shortdef ?? [];
+      shortDefinitions.forEach((def) => {
         definitions.push({
           partOfSpeech: partOfSpeech,
           definition: def,
         });
-      })
+      });
     });
   }
 }
+
 
 function initThesaurus(data) {
   synonyms = [];
   antonyms = [];
 
-  if (data[0].meta.syns) {
-    data[0].meta.syns.forEach((synList) => {
-      synList.forEach((syn) => {
-        synonyms.push({ synonym: syn });
-      })
-    })
-  }
+  const synonymsData = data?.[0]?.meta?.syns ?? [];
+  const antonymsData = data?.[0]?.meta?.ants ?? [];
 
-  if (data[0].meta.ants) {
-    data[0].meta.ants.forEach((antList) => {
-      antList.forEach((ant) => {
-        antonyms.push({ antonym: ant });
-      })
-    })
-  }
+  synonymsData.forEach((synList) => {
+    synList.forEach((syn) => {
+      synonyms.push({ synonym: syn });
+    });
+  });
+
+  antonymsData.forEach((antList) => {
+    antList.forEach((ant) => {
+      antonyms.push({ antonym: ant });
+    });
+  });
 }
+
 
 function initDataBackup(data) {
   definitions = [];
@@ -152,7 +161,7 @@ function initDataBackup(data) {
   audio = null;
   pronunciation = null;
 
-  if (data[0].phonetics[1] && data[0].phonetic) {
+  if (data?.[0]?.phonetics?.[1]?.audio && data?.[0]?.phonetic) {
     audio = new Audio(data[0].phonetics[1].audio);
     pronunciation = data[0].phonetic;
   }
@@ -194,7 +203,7 @@ function createMenuContainer() {
   if (isLeftScreen) {
     menuContainer.style.left = selectionRect.left + "px";
   } else {
-    menuContainer.style.right = (screenWidth - selectionRect.right - scrollbarWidth) + "px";
+    menuContainer.style.right = screenWidth - selectionRect.right - scrollbarWidth + "px";
   }
 
   menuContainer.style.top = selectionRect.bottom + window.scrollY + "px";
@@ -291,27 +300,30 @@ function showAntonyms() {
 }
 
 function createSearchWordEntry() {
-  //TODO: make these into class(es)
   const searchWordContainer = document.createElement("div");
-  searchWordContainer.style.display = "flex";
-  searchWordContainer.style.justifyContent = "space-between";
+  searchWordContainer.classList.add("searchWordContainer");
   const phoneticsContainer = document.createElement("div");
-  phoneticsContainer.style.display = "flex";
+  phoneticsContainer.classList.add("phoneticsContainer");
+
   const searchWordEntry = document.createElement("p");
   searchWordEntry.classList.add("searchWordEntry");
+  searchWordEntry.textContent = selectedText.charAt(0).toUpperCase() + selectedText.slice(1);
   const phonetics = document.createElement("p");
   phonetics.classList.add("phonetics");
   phonetics.textContent = pronunciation;
-  const selectedText = window.getSelection().toString().trim();
-  searchWordEntry.textContent = selectedText.charAt(0).toUpperCase() + selectedText.slice(1);
 
   const speakerIcon = document.createElement("i");
-  speakerIcon.classList.add("fas", "fa-volume-up");
-  speakerIcon.style.alignContent = "center";
-  speakerIcon.style.paddingRight = "5px";
-  speakerIcon.addEventListener("click", () => {
-    audio.play();
-  });
+  if (audio) {
+    speakerIcon.classList.add("fas", "fa-volume-up");
+    speakerIcon.classList.add("speakerIcon");
+    speakerIcon.addEventListener("click", () => {
+      audio.play();
+    });
+  } else {
+    speakerIcon.classList.add("fas", "fa-volume-up");
+    speakerIcon.classList.add("speakerIcon");
+    speakerIcon.style.color = "lightgray";
+  }
 
   phoneticsContainer.appendChild(searchWordEntry);
   phoneticsContainer.appendChild(phonetics);
@@ -387,12 +399,8 @@ function createSelectedEntryContainer(span, entryText) {
     selectedEntryContainer = null;
   } else {
     const spanRect = span.getBoundingClientRect();
-    //TODO: make own class
     selectedEntryContainer = document.createElement("div");
-    selectedEntryContainer.classList.add("entryContainer");
-    selectedEntryContainer.style.position = "absolute";
-    selectedEntryContainer.style.borderTopRightRadius = "10px";
-    selectedEntryContainer.style.borderBottomRightRadius = "10px";
+    selectedEntryContainer.classList.add("selectedEntryContainer");
 
     const screenWidth = window.innerWidth;
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -400,15 +408,14 @@ function createSelectedEntryContainer(span, entryText) {
     if (isLeftScreen) {
       selectedEntryContainer.style.left = spanRect.left + "px";
     } else {
-      selectedEntryContainer.style.right = (screenWidth - spanRect.right - scrollbarWidth) + "px";
+      selectedEntryContainer.style.right = screenWidth - spanRect.right - scrollbarWidth + "px";
     }
 
     selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
 
     const selectedEntry = document.createElement("p");
+    selectedEntry.classList.add("selectedEntry");
     selectedEntry.textContent = entryText;
-    selectedEntry.classList.add("entry");
-    selectedEntry.style.borderBottom = "none";
     selectedEntry.addEventListener("click", () => {
       selectedEntryContainer.remove();
       selectedEntryContainer = null;
