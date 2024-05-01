@@ -14,6 +14,7 @@ let entriesContainer;
 let selectedEntryContainer;
 let range;
 let selectedText;
+let selectedSpan = null;
 
 let definitions = [];
 let synonyms = [];
@@ -25,74 +26,81 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "fetchDefinitions") {
     range = window.getSelection().getRangeAt(0);
     selectedText = window.getSelection().toString().trim();
-    let apiUrl = "https://dictionaryapi.com/api/v3/references/collegiate/json/" + encodeURIComponent(selectedText) + "?key=1f8aba8b-8b44-4786-93fd-dfc4ff0e94cf";
+    let apiUrl =
+      "https://dictionaryapi.com/api/v3/references/collegiate/json/" + encodeURIComponent(selectedText) + "?key=1f8aba8b-8b44-4786-93fd-dfc4ff0e94cf";
 
-    fetch(apiUrl)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok (dictionary)");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        initDictionary(data);
+    if (/^[a-zA-Z]+$/.test(selectedText)) {
+      fetch(apiUrl)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok (dictionary)");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          initDictionary(data);
 
-        apiUrl = "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
-        fetch(apiUrl)
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok (thesaurus)");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            initThesaurus(data);
-            createMenuContainer();
-            showDefinitions();
-          })
-          .catch((error) => {
-            console.error("There was a problem with the fetch operation (thesaurus):", error);
-            console.error("Reverting to backup");
+          apiUrl =
+            "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
+          fetch(apiUrl)
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok (thesaurus)");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              initThesaurus(data);
+              createMenuContainer();
+              showDefinitions();
+            })
+            .catch((error) => {
+              console.error("There was a problem with the fetch operation (thesaurus):", error);
+              console.error("Reverting to backup");
 
-            apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
-            fetch(apiUrl)
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error("Network response was not ok (backup)");
-                }
-                return response.json();
-              })
-              .then((data) => {
-                initDataBackup(data);
-                createMenuContainer();
-                showDefinitions();
-              })
-              .catch((error) => {
-                console.error("There was a problem with the fetch operation (backup):", error);
-              });
-          });
-      })
-      .catch((error) => {
-        console.error("There was a problem with the fetch operation (dictionary):", error);
-        console.error("Reverting to backup");
+              apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
+              fetch(apiUrl)
+                .then((response) => {
+                  if (!response.ok) {
+                    throw new Error("Network response was not ok (backup)");
+                  }
+                  return response.json();
+                })
+                .then((data) => {
+                  initDataBackup(data);
+                  createMenuContainer();
+                  showDefinitions();
+                })
+                .catch((error) => {
+                  console.error("There was a problem with the fetch operation (backup):", error);
+                });
+            });
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation (dictionary):", error);
+          console.error("Reverting to backup");
 
-        apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
-        fetch(apiUrl)
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok (backup)");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            initDataBackup(data);
-            createMenuContainer();
-            showDefinitions();
-          })
-          .catch((error) => {
-            console.error("There was a problem with the fetch operation (backup):", error);
-          });
-      });
+          apiUrl = "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(selectedText);
+          fetch(apiUrl)
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok (backup)");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              initDataBackup(data);
+              createMenuContainer();
+              showDefinitions();
+            })
+            .catch((error) => {
+              console.error("There was a problem with the fetch operation (backup):", error);
+            });
+        });
+    } else {
+      createMenuContainer();
+      createEmptyEntry("definition");
+    }
   }
 });
 
@@ -132,7 +140,6 @@ function initDictionary(data) {
   }
 }
 
-
 function initThesaurus(data) {
   synonyms = [];
   antonyms = [];
@@ -152,7 +159,6 @@ function initThesaurus(data) {
     });
   });
 }
-
 
 function initDataBackup(data) {
   definitions = [];
@@ -341,6 +347,14 @@ function createEntriesContainer(isLeftScreen) {
 }
 
 function createEmptyEntry(type) {
+  if (type === "definition") {
+    definitions = [];
+  } else if (type === "synonym") {
+    synonyms = [];
+  } else if (type === "antonym") {
+    antonyms = [];
+  }
+
   const emptyEntry = document.createElement("p");
   emptyEntry.textContent = "No " + type + "s found";
   emptyEntry.classList.add("entry");
@@ -376,54 +390,76 @@ function createSpan(entryText, type) {
   if (type === "definition") {
     span.addEventListener("click", (event) => {
       event.stopPropagation();
-      createSelectedEntryContainer(span, entryText);
+      if (selectedSpan !== span) {
+        selectedSpan = span;
+        createSelectedEntryContainer(span, entryText);
+      } else {
+        selectedSpan = null;
+        closeSelectedEntryContainer();
+      }
     });
   } else if (type === "synonym") {
     span.addEventListener("click", (event) => {
       event.stopPropagation();
-      createSelectedEntryContainer(span, "(synonym) " + entryText);
+      if (selectedSpan !== span) {
+        selectedSpan = span;
+        createSelectedEntryContainer(span, "(synonym) " + entryText);
+      } else {
+        selectedSpan = null;
+        closeSelectedEntryContainer();
+      }
     });
   } else if (type === "antonym") {
     span.addEventListener("click", (event) => {
       event.stopPropagation();
-      createSelectedEntryContainer(span, "(antonym) " + entryText);
+      if (selectedSpan !== span) {
+        selectedSpan = span;
+        createSelectedEntryContainer(span, "(antonym) " + entryText);
+      } else {
+        selectedSpan = null;
+        closeSelectedEntryContainer();
+      }
     });
   }
   range.surroundContents(span);
   menuContainer.remove();
 }
 
-function createSelectedEntryContainer(span, entryText) {
+function closeSelectedEntryContainer() {
   if (selectedEntryContainer) {
     selectedEntryContainer.remove();
     selectedEntryContainer = null;
-  } else {
-    const spanRect = span.getBoundingClientRect();
-    selectedEntryContainer = document.createElement("div");
-    selectedEntryContainer.classList.add("selectedEntryContainer");
-
-    const screenWidth = window.innerWidth;
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-    const isLeftScreen = spanRect.left < screenWidth / 2;
-    if (isLeftScreen) {
-      selectedEntryContainer.style.left = spanRect.left + "px";
-    } else {
-      selectedEntryContainer.style.right = screenWidth - spanRect.right - scrollbarWidth + "px";
-    }
-
-    selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
-
-    const selectedEntry = document.createElement("p");
-    selectedEntry.classList.add("selectedEntry");
-    selectedEntry.textContent = entryText;
-    selectedEntry.addEventListener("click", () => {
-      selectedEntryContainer.remove();
-      selectedEntryContainer = null;
-    });
-
-    document.body.appendChild(selectedEntryContainer);
-    selectedEntryContainer.appendChild(selectedEntry);
   }
+}
+
+function createSelectedEntryContainer(span, entryText) {
+  closeSelectedEntryContainer();
+  const spanRect = span.getBoundingClientRect();
+  selectedEntryContainer = document.createElement("div");
+  selectedEntryContainer.classList.add("selectedEntryContainer");
+
+  const screenWidth = window.innerWidth;
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  const isLeftScreen = spanRect.left < screenWidth / 2;
+  if (isLeftScreen) {
+    selectedEntryContainer.style.left = spanRect.left + "px";
+  } else {
+    selectedEntryContainer.style.right = screenWidth - spanRect.right - scrollbarWidth + "px";
+  }
+
+  selectedEntryContainer.style.top = spanRect.bottom + window.scrollY + "px";
+
+  const selectedEntry = document.createElement("p");
+  selectedEntry.classList.add("selectedEntry");
+  selectedEntry.textContent = entryText;
+  selectedEntry.addEventListener("click", () => {
+    selectedSpan = null;
+    selectedEntryContainer.remove();
+    selectedEntryContainer = null;
+  });
+
+  document.body.appendChild(selectedEntryContainer);
+  selectedEntryContainer.appendChild(selectedEntry);
 }
 
 document.addEventListener("selectionchange", function () {
@@ -435,6 +471,7 @@ document.addEventListener("selectionchange", function () {
 
 document.addEventListener("click", () => {
   if (selectedEntryContainer) {
+    selectedSpan = null;
     selectedEntryContainer.remove();
     selectedEntryContainer = null;
   }
