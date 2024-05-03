@@ -26,8 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "fetchDefinitions") {
     range = window.getSelection().getRangeAt(0);
     selectedText = window.getSelection().toString().trim();
-    let apiUrl =
-      "https://dictionaryapi.com/api/v3/references/collegiate/json/" + encodeURIComponent(selectedText) + "?key=1f8aba8b-8b44-4786-93fd-dfc4ff0e94cf";
+    let apiUrl = "https://dictionaryapi.com/api/v3/references/collegiate/json/" + encodeURIComponent(selectedText) + "?key=1f8aba8b-8b44-4786-93fd-dfc4ff0e94cf";
 
     if (/^[a-zA-Z]+$/.test(selectedText)) {
       fetch(apiUrl)
@@ -40,8 +39,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         .then((data) => {
           initDictionary(data);
 
-          apiUrl =
-            "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
+          apiUrl = "https://dictionaryapi.com/api/v3/references/thesaurus/json/" + encodeURIComponent(selectedText) + "?key=c8637c2a-3400-4b00-983c-2a021f8ad004";
           fetch(apiUrl)
             .then((response) => {
               if (!response.ok) {
@@ -126,18 +124,23 @@ function initDictionary(data) {
     pronunciation = data?.[0]?.hwi?.prs?.[0]?.mw;
   }
 
-  const partOfSpeech = data?.[0]?.fl;
-  if (partOfSpeech) {
-    data.forEach((entry) => {
-      const shortDefinitions = entry.shortdef ?? [];
+  data.forEach((entry) => {
+    const partOfSpeech = entry.fl ?? "";
+    const shortDefinitions = entry.shortdef ?? [];
+    if (entry.cxs) {
+      definitions.push({
+        partOfSpeech: partOfSpeech,
+        definition: entry.cxs[0].cxl + " " + entry.cxs[0].cxtis[0].cxt,
+      });
+    } else {
       shortDefinitions.forEach((def) => {
         definitions.push({
           partOfSpeech: partOfSpeech,
           definition: def,
         });
       });
-    });
-  }
+    }
+  });
 }
 
 function initThesaurus(data) {
@@ -313,7 +316,7 @@ function createSearchWordEntry() {
 
   const searchWordEntry = document.createElement("p");
   searchWordEntry.classList.add("searchWordEntry");
-  searchWordEntry.textContent = selectedText.charAt(0).toUpperCase() + selectedText.slice(1);
+  searchWordEntry.textContent = selectedText.charAt(0).toUpperCase() + selectedText.slice(1).toLowerCase();
   const phonetics = document.createElement("p");
   phonetics.classList.add("phonetics");
   phonetics.textContent = pronunciation;
@@ -369,7 +372,8 @@ function createEmptyEntry(type) {
 function createEntry(definition, synonym, antonym, type) {
   const entry = document.createElement("p");
   if (type === "definition") {
-    entry.textContent = "(" + definition.partOfSpeech + ") " + definition.definition;
+    entry.textContent = definition.partOfSpeech ? "(" + definition.partOfSpeech + ") " + definition.definition : definition.definition;
+    // entry.textContent = "(" + definition.partOfSpeech + ") " + definition.definition;
     entry.classList.add("entry");
     entry.addEventListener("click", () => createSpan(entry.textContent, type));
   } else if (type === "synonym") {

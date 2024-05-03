@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Defind",
-  "description": "Chrome extension that lets you find definitions, synonyms, and antonyms of a highlighted word",
+  "description": "Find available definitions, synonyms, and antonyms of a highlighted word.",
   "version": "1.0",
   "permissions": ["contextMenus", "activeTab"],
   "background": {
