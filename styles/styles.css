@@ -19,9 +19,11 @@
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  scrollbar-width: auto; /* For Firefox */
+  scrollbar-color: #ccc #f9f9f9; /* For Firefox */
 }
 
-.entryContainer::-webkit-scrollbar-track {
+/*.entryContainer::-webkit-scrollbar-track {
   background-color: #f9f9f9;
   border-radius: 10px;
 }
@@ -33,7 +35,7 @@
 
 .entryContainer::-webkit-scrollbar-corner {
   background-color: transparent;
-}
+}*/
 
 .searchWordEntry {
   color: black;
@@ -82,6 +84,8 @@
 .tabs {
   display: flex;
   justify-content: right;
+  width: 500px;
+  height: 26px;
 }
 
 .tab {
@@ -94,6 +98,11 @@
   box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
   color: black;
   font-weight: bold;
+  font-family: Arial, Helvetica, sans-serif;
+  height: 26px;
+  width: 90px;
+  font-size: 13px;
+  padding: 0px;
 }
 
 .tab.active {
@@ -128,10 +137,12 @@
 .searchWordContainer {
   display: flex;
   justify-content: space-between;
+  height: 40px;
 }
 
 .phoneticsContainer {
   display: flex;
+  align-items: baseline;
 }
 
 .speakerIcon {
