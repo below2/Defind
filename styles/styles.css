@@ -1,6 +1,6 @@
 .menuContainer {
   position: absolute;
-  z-index: 9999;
+  z-index: 99999;
   width: 500px;
   background-color: transparent;
   transform: translateY(-21px);
